@@ -19,6 +19,7 @@ impl TcpStorage {
             connection_id: connection_id.to_string(),
             files_to_chunks: HashMap::new(),
         });
+        self.print();
     }
 
     pub fn remove(&mut self, connection_id: &str) {

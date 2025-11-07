@@ -1,16 +1,16 @@
+use crate::{
+    state::{
+        message::{TcpMessageFromStorage, TcpMessageType},
+        storage_unit::TcpStorage,
+    },
+    tcp_connection_to_storage::loop_health_check_sender::health_check_send,
+};
 use std::sync::{Arc, Mutex};
-
 use tokio::{
     io::{AsyncBufReadExt, BufReader},
-    net::{TcpListener, tcp},
-    time::{Duration, interval},
+    net::TcpListener,
 };
 use uuid::Uuid;
-
-use crate::state::{
-    message::{TcpMessageFromStorage, TcpMessageType},
-    storage_unit::TcpStorage,
-};
 
 pub async fn accept_connections(
     listener: TcpListener,
@@ -24,12 +24,14 @@ pub async fn accept_connections(
             .map_err(|e| format!("Failed to accept connection: {}", e))?;
 
         tokio::spawn(async move {
+            println!("New tcp connection arrived");
+            let shared_conn_state = Arc::new(Mutex::new(true));
             let connection_id = Uuid::new_v4().to_string();
-            let (reader, mut writer) = socket.into_split();
+            let (reader, writer) = socket.into_split();
             let mut buf_reader = BufReader::new(reader);
             let mut buf = Vec::new();
+            tokio::spawn(health_check_send(writer, Arc::clone(&shared_conn_state)));
             loop {
-                tcp_storage_inner.lock().expect("dd").print();
                 buf.clear();
                 match buf_reader.read_until(b'\n', &mut buf).await {
                     Ok(0) => {
@@ -40,6 +42,7 @@ pub async fn accept_connections(
                         if let Ok(msg) = serde_json::from_slice::<TcpMessageFromStorage>(&buf) {
                             match msg.message_type {
                                 TcpMessageType::JOIN => {
+                                    println!("here");
                                     tcp_storage_inner
                                         .lock()
                                         .expect("Deadlock in tcp message locking stage")
@@ -55,6 +58,8 @@ pub async fn accept_connections(
                     }
                 }
             }
+            let mut update_shared_state = shared_conn_state.lock().unwrap();
+            *update_shared_state = false;
             tcp_storage_inner
                 .lock()
                 .expect("Deadlock in tcp message locking stage")

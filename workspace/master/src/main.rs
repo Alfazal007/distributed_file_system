@@ -1,9 +1,4 @@
-use std::{
-    sync::{Arc, Mutex},
-    time::Duration,
-};
-
-use tokio::time::interval;
+use std::sync::{Arc, Mutex};
 
 use crate::{
     http_connection_to_client::http_main::http_main, state::storage_unit::TcpStorage,
