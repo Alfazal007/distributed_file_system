@@ -6,6 +6,7 @@ use crate::{
 };
 
 pub mod http_connection_to_client;
+pub mod protos;
 pub mod state;
 pub mod tcp_connection_to_storage;
 

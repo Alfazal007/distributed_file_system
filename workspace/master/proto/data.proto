@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package data;
+
+message JoinMessageFromStorageToMaster {
+}
+
+message MessageFromMasterToStorage {
+    string id = 1;
+}
+
+message MessageFromStorageToMaster {
+    oneof msg_type {
+        JoinMessageFromStorageToMaster join = 1;
+    }
+}

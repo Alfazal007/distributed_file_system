@@ -1,10 +1,8 @@
 use crate::{
-    state::{
-        message::{TcpMessageFromStorage, TcpMessageType},
-        storage_unit::TcpStorage,
-    },
+    protos::data, state::storage_unit::TcpStorage,
     tcp_connection_to_storage::loop_health_check_sender::health_check_send,
 };
+use prost::Message;
 use std::sync::{Arc, Mutex};
 use tokio::{
     io::{AsyncBufReadExt, BufReader},
@@ -30,7 +28,11 @@ pub async fn accept_connections(
             let (reader, writer) = socket.into_split();
             let mut buf_reader = BufReader::new(reader);
             let mut buf = Vec::new();
-            tokio::spawn(health_check_send(writer, Arc::clone(&shared_conn_state)));
+            tokio::spawn(health_check_send(
+                writer,
+                Arc::clone(&shared_conn_state),
+                connection_id.clone(),
+            ));
             loop {
                 buf.clear();
                 match buf_reader.read_until(b'\n', &mut buf).await {
@@ -39,16 +41,17 @@ pub async fn accept_connections(
                         break;
                     }
                     Ok(_) => {
-                        if let Ok(msg) = serde_json::from_slice::<TcpMessageFromStorage>(&buf) {
-                            match msg.message_type {
-                                TcpMessageType::JOIN => {
-                                    println!("here");
-                                    tcp_storage_inner
-                                        .lock()
-                                        .expect("Deadlock in tcp message locking stage")
-                                        .insert(&connection_id);
+                        if let Ok(msg) = data::MessageFromStorageToMaster::decode(&*buf) {
+                            if let Some(internal_msg) = msg.msg_type {
+                                match internal_msg {
+                                    data::message_from_storage_to_master::MsgType::Join(_) => {
+                                        tcp_storage_inner
+                                            .lock()
+                                            .expect("Deadlock in tcp message locking stage")
+                                            .insert(&connection_id);
+                                        *shared_conn_state.lock().unwrap() = true;
+                                    } // TODO:: add health check thing here too
                                 }
-                                TcpMessageType::HEALTH => {}
                             }
                         }
                     }
