@@ -1,7 +1,13 @@
-use std::collections::HashMap;
+use crate::protos::data::{FileMappings, HealthMessageFromStorageToMaster};
 
 #[derive(Debug)]
 pub struct ConnectionData {
     pub connection_id: String,
-    pub files_to_chunks: HashMap<String, Vec<String>>,
+    pub files_to_chunks: ::prost::alloc::vec::Vec<FileMappings>,
+}
+
+impl ConnectionData {
+    pub fn update_state(&mut self, file_state: HealthMessageFromStorageToMaster) {
+        self.files_to_chunks = file_state.file_mappings;
+    }
 }

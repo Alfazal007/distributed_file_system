@@ -2,20 +2,34 @@
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct JoinMessageFromStorageToMaster {}
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct FileMappings {
+    #[prost(string, tag = "1")]
+    pub filename: ::prost::alloc::string::String,
+    #[prost(int32, repeated, tag = "2")]
+    pub chunk_ids: ::prost::alloc::vec::Vec<i32>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct HealthMessageFromStorageToMaster {
+    #[prost(message, repeated, tag = "1")]
+    pub file_mappings: ::prost::alloc::vec::Vec<FileMappings>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct MessageFromMasterToStorage {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
 }
-#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MessageFromStorageToMaster {
-    #[prost(oneof = "message_from_storage_to_master::MsgType", tags = "1")]
+    #[prost(oneof = "message_from_storage_to_master::MsgType", tags = "1, 2")]
     pub msg_type: ::core::option::Option<message_from_storage_to_master::MsgType>,
 }
 /// Nested message and enum types in `MessageFromStorageToMaster`.
 pub mod message_from_storage_to_master {
-    #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Oneof)]
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum MsgType {
         #[prost(message, tag = "1")]
         Join(super::JoinMessageFromStorageToMaster),
+        #[prost(message, tag = "2")]
+        Health(super::HealthMessageFromStorageToMaster),
     }
 }

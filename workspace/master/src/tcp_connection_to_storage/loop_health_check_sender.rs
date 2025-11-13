@@ -22,7 +22,6 @@ pub async fn health_check_send(
             return;
         }
         writer.write(&encoded_message[..]).await.unwrap();
-        println!("flushing");
         writer.flush().await.unwrap();
     }
 }

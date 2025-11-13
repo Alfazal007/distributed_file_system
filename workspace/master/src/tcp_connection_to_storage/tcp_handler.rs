@@ -23,6 +23,7 @@ pub async fn accept_connections(
 
         tokio::spawn(async move {
             println!("New tcp connection arrived");
+            // Used to track if connection has sent the join message or not
             let shared_conn_state = Arc::new(Mutex::new(true));
             let connection_id = Uuid::new_v4().to_string();
             let (reader, writer) = socket.into_split();
@@ -35,12 +36,13 @@ pub async fn accept_connections(
             ));
             loop {
                 buf.clear();
-                match buf_reader.read_until(b'\n', &mut buf).await {
+                match buf_reader.read_until(b'\0', &mut buf).await {
                     Ok(0) => {
                         println!("Client {} disconnected", addr);
                         break;
                     }
                     Ok(_) => {
+                        println!();
                         if let Ok(msg) = data::MessageFromStorageToMaster::decode(&*buf) {
                             if let Some(internal_msg) = msg.msg_type {
                                 match internal_msg {
@@ -50,9 +52,17 @@ pub async fn accept_connections(
                                             .expect("Deadlock in tcp message locking stage")
                                             .insert(&connection_id);
                                         *shared_conn_state.lock().unwrap() = true;
-                                    } // TODO:: add health check thing here too
+                                    }
+                                    data::message_from_storage_to_master::MsgType::Health(
+                                        file_state,
+                                    ) => tcp_storage_inner
+                                        .lock()
+                                        .expect("Deadlock in tcp message locking stage")
+                                        .update_state(&connection_id, file_state),
                                 }
                             }
+                        } else {
+                            println!("wrong message");
                         }
                     }
                     Err(e) => {
