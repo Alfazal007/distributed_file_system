@@ -42,7 +42,6 @@ pub async fn accept_connections(
                         break;
                     }
                     Ok(_) => {
-                        println!();
                         if let Ok(msg) = data::MessageFromStorageToMaster::decode(&*buf) {
                             if let Some(internal_msg) = msg.msg_type {
                                 match internal_msg {
@@ -50,7 +49,7 @@ pub async fn accept_connections(
                                         tcp_storage_inner
                                             .lock()
                                             .expect("Deadlock in tcp message locking stage")
-                                            .insert(&connection_id);
+                                            .insert(&connection_id, addr.ip());
                                         *shared_conn_state.lock().unwrap() = true;
                                     }
                                     data::message_from_storage_to_master::MsgType::Health(
