@@ -56,12 +56,43 @@ impl TcpStorage {
         println!("{:?}", self.connections);
     }
 
-    pub fn increment_index_and_return(&mut self) -> i32 {
-        if self.index_to_write == -1 {
-            self.index_to_write = 0;
-            return 0;
+    pub fn increment_index_and_return_addr(&mut self) -> Option<IpAddr> {
+        if self.connections.len() == 0 {
+            return None;
         }
-        self.index_to_write = (self.index_to_write + 1) % self.connections.len() as i32;
-        return self.index_to_write;
+        if self.index_to_write < 0 {
+            self.index_to_write = 0;
+        } else {
+            self.index_to_write = (self.index_to_write + 1) % self.connections.len() as i32;
+        }
+        let conn = self.connections.get(self.index_to_write as usize);
+        if let Some(conn) = conn {
+            return Some(conn.ip);
+        } else {
+            return None;
+        }
+    }
+
+    pub fn get_location(&self, file_name: &str, chunk_id: i32) -> Option<IpAddr> {
+        for conn in self.connections.iter() {
+            for files in conn.files_to_chunks.iter() {
+                if files.filename == file_name {
+                    for chunk in files.chunk_ids.iter() {
+                        if *chunk == chunk_id {
+                            return Some(conn.ip);
+                        }
+                    }
+                }
+            }
+        }
+        return None;
+    }
+
+    pub fn get_multiple_chunks(&self, file_name: &str, chunk_ids: Vec<i32>) -> Vec<Option<IpAddr>> {
+        let mut res = Vec::new();
+        for id in chunk_ids {
+            res.push(self.get_location(file_name, id));
+        }
+        return res;
     }
 }
