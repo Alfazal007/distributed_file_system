@@ -2,8 +2,10 @@
 #define STORAGE_STATE_H
 
 #include <pthread.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 typedef struct {
     char *file_path;
@@ -14,6 +16,12 @@ typedef struct {
     FileStateCurrentInner *file_to_chunk_state;
     pthread_mutex_t lock;
 } StorageStateOuter;
+
+typedef struct {
+    int socket_fd;
+    StorageStateOuter *state;
+    bool *shouldWork;
+} Tcp_thread_args_t;
 
 void storage_state_init(StorageStateOuter *state);
 

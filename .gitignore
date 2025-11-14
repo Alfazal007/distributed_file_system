@@ -1,6 +1,7 @@
 target
 *.o
 .env
+node_modules
 generated
 ignore
 todo.txt

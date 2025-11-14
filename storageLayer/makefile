@@ -7,7 +7,7 @@ SRC_DIRS = . tcpClient headers proto
 SOURCES := $(sort $(shell find $(SRC_DIRS) -type f -name '*.c' | sed 's|^\./||'))
 OBJECTS := $(patsubst %.c,$(OBJ_DIR)/%.o,$(SOURCES))
 
-LIBS = -lprotobuf-c
+LIBS = -lprotobuf-c -lmicrohttpd -lpthread
 $(TARGET): $(OBJECTS)
 	@echo "🔧 Linking $(TARGET)..."
 	$(CC) $(CFLAGS) -o $@ $^ $(LIBS)

@@ -3,6 +3,7 @@
 #include "../headers/tcpClient.h"
 #include "../proto/data.pb-c.h"
 #include <arpa/inet.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,14 +48,19 @@ void send_initial_message(int socket_fd) {
     free(join_message_buf);
 }
 
-void receive_messages(int socket_fd, StorageStateOuter *state) {
+void *receive_messages(void *arg) {
+    Tcp_thread_args_t *args = (Tcp_thread_args_t *)arg;
+    int socket_fd = args->socket_fd;
+    StorageStateOuter *state = args->state;
+    bool *shouldWork = args->shouldWork;
     uint8_t buffer[BUFFER_SIZE];
-    while (1) {
+    while (*shouldWork) {
         memset(buffer, 0, BUFFER_SIZE);
         int bytes_received = recv(socket_fd, buffer, BUFFER_SIZE - 1, 0);
         if (bytes_received < 0) {
             perror("recv failed");
-            exit(EXIT_FAILURE);
+            *shouldWork = false;
+            return NULL;
         } else if (bytes_received == 0) {
             printf("Server closed connection\n");
             break;
@@ -64,7 +70,8 @@ void receive_messages(int socket_fd, StorageStateOuter *state) {
                 NULL, bytes_received - 1, buffer);
         if (msg == NULL) {
             fprintf(stderr, "Failed to decode message from Master node\n");
-            return;
+            *shouldWork = false;
+            return NULL;
         }
         printf("\nReceived msg id = : %s\n", msg->id);
         size_t buf_len;
@@ -73,10 +80,13 @@ void receive_messages(int socket_fd, StorageStateOuter *state) {
         if (send(socket_fd, file_state_message_buf, buf_len, 0) < 0) {
             perror("send failed");
             free(file_state_message_buf);
-            exit(EXIT_FAILURE);
+            *shouldWork = false;
+            return NULL;
         }
         free(file_state_message_buf);
     }
+    *shouldWork = false;
+    return NULL;
 }
 
 void cleanup(int socket_fd) {
