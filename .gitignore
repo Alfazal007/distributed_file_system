@@ -1,4 +1,5 @@
 target
+*.o
 .env
 generated
 ignore
