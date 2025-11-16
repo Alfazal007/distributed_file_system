@@ -1,9 +1,11 @@
+#define _GNU_SOURCE
 #include "../proto/data.pb-c.h"
 #include <pthread.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 typedef struct {
     char *file_path;
@@ -18,18 +20,54 @@ typedef struct {
 } StorageStateOuter;
 
 void storage_state_init(StorageStateOuter *storage_state) {
+    // TODO:: construct state from existing if it exists
     pthread_mutex_init(&storage_state->lock, NULL);
     storage_state->file_to_chunk_state = NULL;
     storage_state->num_file_count = 0;
 }
 
 void storage_state_destroy(StorageStateOuter *storage_state) {
+    pthread_mutex_lock(&storage_state->lock);
+    for (int i = 0; i < storage_state->num_file_count; i++) {
+        free(storage_state->file_to_chunk_state[i].file_path);
+        free(storage_state->file_to_chunk_state[i].chunk_ids);
+    }
+    free(storage_state->file_to_chunk_state);
+    pthread_mutex_unlock(&storage_state->lock);
     pthread_mutex_destroy(&storage_state->lock);
-    free(storage_state);
 }
 
-// TODO:: implement this later on when working on http layer
-void insert_to_struct(StorageStateOuter *state, char *file_path, int chunk_id) {
+void push_chunk_id(FileStateCurrentInner *file_state, int chunk_id) {
+    int *temp = realloc(file_state->chunk_ids,
+                        (file_state->num_chunks + 1) * sizeof(int));
+    if (temp == NULL) {
+        fprintf(stderr, "Failed to allocate memory for chunk_ids\n");
+        return;
+    }
+    file_state->chunk_ids = temp;
+    file_state->chunk_ids[file_state->num_chunks] = chunk_id;
+    file_state->num_chunks++;
+    printf("\n\ninside push chunkl id error part \n\n");
+}
+
+void insert_to_struct(StorageStateOuter *state, const char *file_path,
+                      int chunk_id) {
+    pthread_mutex_lock(&state->lock);
+    if (chunk_id == 1) {
+        state->file_to_chunk_state = realloc(state->file_to_chunk_state,
+                                             (state->num_file_count + 1) *
+                                                 sizeof(FileStateCurrentInner));
+        FileStateCurrentInner *new_file =
+            &state->file_to_chunk_state[state->num_file_count];
+        new_file->file_path = strdup(file_path);
+        new_file->chunk_ids = NULL;
+        new_file->num_chunks = 0;
+        state->num_file_count++;
+    }
+    FileStateCurrentInner *current_file =
+        &state->file_to_chunk_state[state->num_file_count - 1];
+    push_chunk_id(current_file, chunk_id);
+    pthread_mutex_unlock(&state->lock);
 }
 
 void remove_from_struct(StorageStateOuter *state, char *file_path,
@@ -69,4 +107,23 @@ uint8_t *return_current_state_encoded_in_protobufs(StorageStateOuter *state,
         free(msg.file_mappings);
     }
     return buf;
+}
+
+void print_storage_state(StorageStateOuter *state) {
+    pthread_mutex_lock(&state->lock);
+    printf("\n=== Storage State ===\n");
+    printf("Total files: %d\n", state->num_file_count);
+    for (int i = 0; i < state->num_file_count; i++) {
+        FileStateCurrentInner *file = &state->file_to_chunk_state[i];
+        printf("\nFile %d:\n", i + 1);
+        printf("  Path: %s\n", file->file_path);
+        printf("  Total chunks: %d\n", file->num_chunks);
+        printf("  Chunk IDs: ");
+        for (int j = 0; j < file->num_chunks; j++) {
+            printf("%d ", file->chunk_ids[j]);
+        }
+        printf("\n");
+    }
+    printf("===================\n\n");
+    pthread_mutex_unlock(&state->lock);
 }

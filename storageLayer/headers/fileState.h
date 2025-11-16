@@ -23,15 +23,28 @@ typedef struct {
     bool *shouldWork;
 } Tcp_thread_args_t;
 
+typedef struct {
+    char *data;
+    size_t size;
+} connection_info_t;
+
+typedef struct {
+    unsigned char *files_bytes_data;
+    size_t data_size;
+} FileChunk_t;
+
 void storage_state_init(StorageStateOuter *state);
 
 void storage_state_destroy(StorageStateOuter *state);
 
-void insert_to_struct(StorageStateOuter *state, char *file_path, int chunk_id);
+void insert_to_struct(StorageStateOuter *state, const char *file_path,
+                      int chunk_id);
 
 void remove_from_struct(StorageStateOuter *state, char *file_path,
                         int chunk_id);
 
 uint8_t *return_current_state_encoded_in_protobufs(StorageStateOuter *state,
                                                    size_t *outlen);
+
+void print_storage_state(StorageStateOuter *state);
 #endif

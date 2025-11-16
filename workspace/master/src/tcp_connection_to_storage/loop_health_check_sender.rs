@@ -15,7 +15,7 @@ pub async fn health_check_send(
     let message_to_send = MessageFromMasterToStorage { id: connection_id };
     let mut encoded_message = MessageFromMasterToStorage::encode_to_vec(&message_to_send);
     encoded_message.push(b'\n');
-    let mut interval = interval(Duration::from_secs(10));
+    let mut interval = interval(Duration::from_secs(30));
     loop {
         interval.tick().await;
         if *shared_conn_state.lock().unwrap() == false {

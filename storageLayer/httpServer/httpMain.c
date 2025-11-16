@@ -1,4 +1,5 @@
 #include "../headers/fileState.h"
+#include "../headers/handleNewChunk.h"
 #include <microhttpd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,62 +12,108 @@ typedef struct {
     Tcp_thread_args_t *tcp_args;
 } http_server_context_t;
 
-static const char *handle_hello(void) { return "Hello World!"; }
-
-static const char *handle_status(Tcp_thread_args_t *args) {
-    return "Server is running";
-}
-
-static const char *handle_file_state(Tcp_thread_args_t *args) {
-    return "{\"status\": \"file state\"}";
-}
-
 static enum MHD_Result
 answer_to_connection(void *cls, struct MHD_Connection *connection,
                      const char *url, const char *method, const char *version,
                      const char *upload_data, size_t *upload_data_size,
                      void **con_cls) {
-    const char *page = NULL;
-    int status = MHD_HTTP_OK;
     Tcp_thread_args_t *args = (Tcp_thread_args_t *)cls;
-
-    if (strcmp(url, "/hello") == 0) {
-        page = handle_hello();
-    } else if (strcmp(url, "/status") == 0) {
-        page = handle_status(args);
-    } else if (strcmp(url, "/file-state") == 0) {
-        page = handle_file_state(args);
-    } else {
-        page = "404 Not Found";
-        status = MHD_HTTP_NOT_FOUND;
+    connection_info_t *con_info = *con_cls;
+    if (con_info == NULL) {
+        con_info = malloc(sizeof(connection_info_t));
+        if (con_info == NULL) {
+            return MHD_NO;
+        }
+        con_info->data = NULL;
+        con_info->size = 0;
+        *con_cls = con_info;
+        return MHD_YES;
     }
-
+    if (*upload_data_size != 0) {
+        char *new_data =
+            realloc(con_info->data, con_info->size + *upload_data_size);
+        if (new_data == NULL) {
+            return MHD_NO;
+        }
+        con_info->data = new_data;
+        memcpy(con_info->data + con_info->size, upload_data, *upload_data_size);
+        con_info->size += *upload_data_size;
+        *upload_data_size = 0;
+        return MHD_YES;
+    }
+    const char *page = NULL;
+    char *response_text = NULL;
+    int status = MHD_HTTP_OK;
+    int should_free = 0;
+    if (strcmp(method, "POST") == 0) {
+        if (strcmp(url, "/new-chunk") == 0) {
+            const char *filename = MHD_lookup_connection_value(
+                connection, MHD_HEADER_KIND, "X-Filename");
+            if (filename == NULL) {
+                page = "{\"error\": \"Missing X-Filename header\"}";
+                status = MHD_HTTP_BAD_REQUEST;
+            } else {
+                if (con_info->data != NULL && con_info->size > 0) {
+                    bool handle_success =
+                        handleNewChunk(con_info, &response_text, &page,
+                                       &should_free, filename, args->state);
+                    if (!handle_success) {
+                        status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+                    }
+                } else {
+                    page = "{\"error\": \"No request body provided\"}";
+                    status = MHD_HTTP_BAD_REQUEST;
+                }
+            }
+        } else {
+            page = "{\"error\": \"404 Not Found\"}";
+            status = MHD_HTTP_NOT_FOUND;
+        }
+    } else {
+        page = "{\"error\": \"Method Not Allowed\"}";
+        status = MHD_HTTP_METHOD_NOT_ALLOWED;
+    }
     struct MHD_Response *response = MHD_create_response_from_buffer(
-        strlen(page), (void *)page, MHD_RESPMEM_PERSISTENT);
+        strlen(page), (void *)page,
+        should_free ? MHD_RESPMEM_MUST_COPY : MHD_RESPMEM_PERSISTENT);
+    MHD_add_response_header(response, "Content-Type", "application/json");
     enum MHD_Result ret = MHD_queue_response(connection, status, response);
     MHD_destroy_response(response);
-
+    if (should_free) {
+        free(response_text);
+    }
     return ret;
+}
+
+static void request_completed(void *cls, struct MHD_Connection *connection,
+                              void **con_cls,
+                              enum MHD_RequestTerminationCode toe) {
+    connection_info_t *con_info = *con_cls;
+    if (con_info == NULL) {
+        return;
+    }
+    if (con_info->data != NULL) {
+        free(con_info->data);
+    }
+    free(con_info);
+    *con_cls = NULL;
 }
 
 void *httpServer(void *arg) {
     Tcp_thread_args_t *args = (Tcp_thread_args_t *)arg;
-    struct MHD_Daemon *daemon =
-        MHD_start_daemon(MHD_USE_SELECT_INTERNALLY, PORT, NULL, NULL,
-                         &answer_to_connection, args, MHD_OPTION_END);
-
+    struct MHD_Daemon *daemon = MHD_start_daemon(
+        MHD_USE_SELECT_INTERNALLY, PORT, NULL, NULL, &answer_to_connection,
+        args, MHD_OPTION_NOTIFY_COMPLETED, request_completed, NULL,
+        MHD_OPTION_END);
     if (NULL == daemon) {
         fprintf(stderr, "Failed to start HTTP server\n");
         *args->shouldWork = false;
         return NULL;
     }
-
     printf("HTTP Server running on port %d\n", PORT);
-
     while (*args->shouldWork) {
-        sleep(1);
+        sleep(2);
     }
-
     MHD_stop_daemon(daemon);
     printf("HTTP Server stopped\n");
     *args->shouldWork = false;
