@@ -29,14 +29,13 @@ bool createDirectories(const char *path) {
 }
 
 bool saveChunkToFile(const char *filename, unsigned char *data,
-                     size_t data_size, StorageStateOuter *state) {
+                     size_t data_size, StorageStateOuter *state, int chunk_id) {
     if (filename == NULL || data == NULL || data_size == 0) {
         fprintf(stderr, "Invalid arguments to saveChunkToFile\n");
         return false;
     }
     char full_path[512];
-    int chunk_num = getNextChunkNumber(filename);
-    snprintf(full_path, sizeof(full_path), "data/%s/%d", filename, chunk_num);
+    snprintf(full_path, sizeof(full_path), "data/%s/%d", filename, chunk_id);
     if (!createDirectories(full_path)) {
         fprintf(stderr, "Failed to create directories\n");
         return false;
@@ -55,7 +54,7 @@ bool saveChunkToFile(const char *filename, unsigned char *data,
         fclose(file);
         return false;
     }
-    insert_to_struct(state, filename, chunk_num);
+    insert_to_struct(state, filename, chunk_id);
     fclose(file);
     printf("Successfully saved %zu bytes to %s\n", data_size, full_path);
     return true;

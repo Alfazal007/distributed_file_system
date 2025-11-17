@@ -95,4 +95,19 @@ impl TcpStorage {
         }
         return res;
     }
+
+    pub fn get_chunks_for_file(&self, file_name: &str) -> Vec<i32> {
+        let mut res = Vec::new();
+        for connection in self.connections.iter() {
+            for mapping_inner in connection.files_to_chunks.iter() {
+                if mapping_inner.filename == file_name {
+                    for id in mapping_inner.chunk_ids.iter() {
+                        res.push(id.clone());
+                    }
+                }
+            }
+        }
+        res.sort();
+        return res;
+    }
 }

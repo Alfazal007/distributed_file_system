@@ -49,14 +49,18 @@ answer_to_connection(void *cls, struct MHD_Connection *connection,
         if (strcmp(url, "/new-chunk") == 0) {
             const char *filename = MHD_lookup_connection_value(
                 connection, MHD_HEADER_KIND, "X-Filename");
-            if (filename == NULL) {
-                page = "{\"error\": \"Missing X-Filename header\"}";
+            const char *chunk_id_str = MHD_lookup_connection_value(
+                connection, MHD_HEADER_KIND, "X-Chunk-ID");
+            if (filename == NULL || chunk_id_str == NULL) {
+                page =
+                    "{\"error\": \"Missing X-Filename header or X-Chunk-ID\"}";
                 status = MHD_HTTP_BAD_REQUEST;
             } else {
+                int chunk_id = atoi(chunk_id_str);
                 if (con_info->data != NULL && con_info->size > 0) {
-                    bool handle_success =
-                        handleNewChunk(con_info, &response_text, &page,
-                                       &should_free, filename, args->state);
+                    bool handle_success = handleNewChunk(
+                        con_info, &response_text, &page, &should_free, filename,
+                        args->state, chunk_id);
                     if (!handle_success) {
                         status = MHD_HTTP_INTERNAL_SERVER_ERROR;
                     }
