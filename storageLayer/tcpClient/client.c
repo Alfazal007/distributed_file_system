@@ -3,6 +3,7 @@
 #include "../headers/tcpClient.h"
 #include "../proto/data.pb-c.h"
 #include <arpa/inet.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -40,11 +41,12 @@ void connect_to_server(int socket_fd) {
 void send_initial_message(int socket_fd) {
     size_t buf_len;
     uint8_t *join_message_buf = join_message(&buf_len);
-    if (send(socket_fd, join_message_buf, buf_len, MSG_WAITALL) < 0) {
+    if (!send_all(socket_fd, join_message_buf, buf_len)) {
         perror("send failed");
         free(join_message_buf);
         exit(EXIT_FAILURE);
     }
+    printf("sent join message\n");
     free(join_message_buf);
 }
 
@@ -77,12 +79,13 @@ void *receive_messages(void *arg) {
         size_t buf_len;
         uint8_t *file_state_message_buf =
             return_current_state_encoded_in_protobufs(state, &buf_len);
-        if (send(socket_fd, file_state_message_buf, buf_len, 0) < 0) {
+        if (!send_all(socket_fd, file_state_message_buf, buf_len)) {
             perror("send failed");
             free(file_state_message_buf);
             *shouldWork = false;
             return NULL;
         }
+        printf("send it correctly");
         free(file_state_message_buf);
     }
     *shouldWork = false;
@@ -92,4 +95,25 @@ void *receive_messages(void *arg) {
 void cleanup(int socket_fd) {
     close(socket_fd);
     printf("Disconnected\n");
+}
+
+bool send_all(int fd, const void *buf, size_t len) {
+    printf("send all called\n");
+    size_t total_sent = 0;
+    const uint8_t *p = buf;
+    while (total_sent < len) {
+        ssize_t n = send(fd, p + total_sent, len - total_sent, 0);
+        if (n < 0) {
+            if (errno == EINTR)
+                continue; // interrupted by signal, retry
+            perror("send failed");
+            return false;
+        }
+        if (n == 0) {
+            fprintf(stderr, "Socket closed during send\n");
+            return false;
+        }
+        total_sent += (size_t)n;
+    }
+    return true;
 }

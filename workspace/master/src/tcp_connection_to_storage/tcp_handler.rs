@@ -42,8 +42,13 @@ pub async fn accept_connections(
                         break;
                     }
                     Ok(_) => {
+                        if buf.len() > 2 {
+                            buf.pop();
+                        }
+                        println!("some message came in");
                         if let Ok(msg) = data::MessageFromStorageToMaster::decode(&*buf) {
                             if let Some(internal_msg) = msg.msg_type {
+                                println!("{:?}", internal_msg);
                                 match internal_msg {
                                     data::message_from_storage_to_master::MsgType::Join(_) => {
                                         tcp_storage_inner

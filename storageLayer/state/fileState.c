@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+#include "../headers/fileState.h"
 #include "../proto/data.pb-c.h"
 #include <pthread.h>
 #include <stddef.h>
@@ -6,18 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-typedef struct {
-    char *file_path;
-    int *chunk_ids;
-    int32_t num_chunks;
-} FileStateCurrentInner;
-
-typedef struct {
-    FileStateCurrentInner *file_to_chunk_state;
-    int num_file_count;
-    pthread_mutex_t lock;
-} StorageStateOuter;
 
 void storage_state_init(StorageStateOuter *storage_state) {
     // TODO:: construct state from existing if it exists
@@ -88,6 +77,7 @@ uint8_t *return_current_state_encoded_in_protobufs(StorageStateOuter *state,
             malloc(state->num_file_count * sizeof(Data__FileMappings *));
         for (int i = 0; i < state->num_file_count; i++) {
             Data__FileMappings *fm = malloc(sizeof(Data__FileMappings));
+            data__file_mappings__init(fm);
             fm->filename = state->file_to_chunk_state[i].file_path;
             fm->n_chunk_ids = state->file_to_chunk_state[i].num_chunks;
             fm->chunk_ids = state->file_to_chunk_state[i].chunk_ids;
@@ -98,14 +88,27 @@ uint8_t *return_current_state_encoded_in_protobufs(StorageStateOuter *state,
     top_wrapper.health = &msg;
     size_t len =
         data__message_from_storage_to_master__get_packed_size(&top_wrapper);
-    uint8_t *buf = malloc(len);
+    bool increase = false;
+    printf("len = %d", len);
+    if (len > 2) {
+        increase = true;
+    }
+    uint8_t *buf = malloc(increase == false ? len : len + 1);
     data__message_from_storage_to_master__pack(&top_wrapper, buf);
-    *outlen = len;
+    *outlen = increase == false ? len : len + 1;
     if (state->num_file_count > 0) {
         for (int i = 0; i < state->num_file_count; i++)
             free(msg.file_mappings[i]);
         free(msg.file_mappings);
     }
+    if (increase) {
+        buf[len] = '\0';
+    }
+    printf("Buffer (%zu bytes):\n", len);
+    for (size_t i = 0; i < *outlen; i++) {
+        printf("%02X ", buf[i]);
+    }
+    printf("\n");
     return buf;
 }
 

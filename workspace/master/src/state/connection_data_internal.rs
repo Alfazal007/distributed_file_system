@@ -11,6 +11,8 @@ pub struct ConnectionData {
 
 impl ConnectionData {
     pub fn update_state(&mut self, file_state: HealthMessageFromStorageToMaster) {
+        println!("PREVIOUS STATE = {:?}", self.files_to_chunks);
         self.files_to_chunks = file_state.file_mappings;
+        println!("UPDATED STATE = {:?}", self.files_to_chunks);
     }
 }

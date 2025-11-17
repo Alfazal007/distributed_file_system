@@ -11,5 +11,6 @@ int create_socket(void);
 void connect_to_server(int socket_fd);
 void send_initial_message(int socket_fd);
 void *receive_messages(void *arg);
+bool send_all(int fd, const void *buf, size_t len);
 void cleanup(int socket_fd);
 #endif

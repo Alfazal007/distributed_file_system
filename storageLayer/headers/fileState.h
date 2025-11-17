@@ -10,10 +10,12 @@
 typedef struct {
     char *file_path;
     int *chunk_ids;
+    int num_chunks;
 } FileStateCurrentInner;
 
 typedef struct {
     FileStateCurrentInner *file_to_chunk_state;
+    int num_file_count;
     pthread_mutex_t lock;
 } StorageStateOuter;
 
@@ -47,4 +49,5 @@ uint8_t *return_current_state_encoded_in_protobufs(StorageStateOuter *state,
                                                    size_t *outlen);
 
 void print_storage_state(StorageStateOuter *state);
+
 #endif
