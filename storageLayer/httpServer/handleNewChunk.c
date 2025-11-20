@@ -21,6 +21,5 @@ bool handleNewChunk(connection_info_t *con_info, char **response_text,
         *page = *response_text;
         *should_free = 1;
     }
-    printf("here3");
     return true;
 }

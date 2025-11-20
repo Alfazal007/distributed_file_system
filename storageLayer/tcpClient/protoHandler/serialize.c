@@ -16,9 +16,5 @@ uint8_t *join_message(size_t *outlen) {
     uint8_t *buffer = malloc(len);
     data__message_from_storage_to_master__pack(&top_wrapper, buffer);
     *outlen = len;
-    printf("Join message \n");
-    for (int i = 0; i < len; i++) {
-        printf("%u ", buffer[i]);
-    }
     return buffer;
 }

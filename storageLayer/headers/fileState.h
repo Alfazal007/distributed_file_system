@@ -40,7 +40,7 @@ void storage_state_init(StorageStateOuter *state);
 void storage_state_destroy(StorageStateOuter *state);
 
 void insert_to_struct(StorageStateOuter *state, const char *file_path,
-                      int chunk_id);
+                      int chunk_id, bool directoryHasFile);
 
 void remove_from_struct(StorageStateOuter *state, char *file_path,
                         int chunk_id);

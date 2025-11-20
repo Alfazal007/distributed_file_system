@@ -1,3 +1,4 @@
+#define _DEFAULT_SOURCE
 #include "../headers/fileOperation.h"
 #include "../headers/fileState.h"
 #include <dirent.h>
@@ -40,6 +41,9 @@ bool saveChunkToFile(const char *filename, unsigned char *data,
     char full_path[512];
     snprintf(full_path, sizeof(full_path), "data/%s/%d", filename, chunk_id);
     bool file_existed_before = file_exists(full_path);
+    char dir_path[512];
+    snprintf(dir_path, sizeof(dir_path), "data/%s", filename);
+    bool directoryHasFile = directoryHasFiles(dir_path);
     if (file_existed_before)
         return true;
     if (!createDirectories(full_path)) {
@@ -52,7 +56,6 @@ bool saveChunkToFile(const char *filename, unsigned char *data,
         return false;
     }
     size_t written = fwrite(data, 1, data_size, file);
-    printf("after writing to server");
     if (written != data_size) {
         fprintf(stderr,
                 "Failed to write all bytes. Expected: %zu, "
@@ -61,9 +64,8 @@ bool saveChunkToFile(const char *filename, unsigned char *data,
         fclose(file);
         return false;
     }
-    insert_to_struct(state, filename, chunk_id);
+    insert_to_struct(state, filename, chunk_id, directoryHasFile);
     fclose(file);
-    printf("Successfully saved %zu bytes to %s\n", data_size, full_path);
     return true;
 }
 
@@ -88,4 +90,23 @@ int getNextChunkNumber(const char *directory) {
     }
     closedir(dir);
     return max_number + 1;
+}
+
+bool directoryHasFiles(const char *dirpath) {
+    DIR *dir = opendir(dirpath);
+    if (dir == NULL) {
+        return false;
+    }
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+        if (strcmp(entry->d_name, ".") != 0 &&
+            strcmp(entry->d_name, "..") != 0) {
+            if (entry->d_type == DT_REG) {
+                closedir(dir);
+                return true;
+            }
+        }
+    }
+    closedir(dir);
+    return false;
 }

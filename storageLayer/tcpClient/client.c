@@ -46,7 +46,6 @@ void send_initial_message(int socket_fd) {
         free(join_message_buf);
         exit(EXIT_FAILURE);
     }
-    printf("sent join message\n");
     free(join_message_buf);
 }
 
@@ -75,7 +74,6 @@ void *receive_messages(void *arg) {
             *shouldWork = false;
             return NULL;
         }
-        printf("\nReceived msg id = : %s\n", msg->id);
         size_t buf_len;
         uint8_t *file_state_message_buf =
             return_current_state_encoded_in_protobufs(state, &buf_len);
@@ -85,7 +83,6 @@ void *receive_messages(void *arg) {
             *shouldWork = false;
             return NULL;
         }
-        printf("send it correctly");
         free(file_state_message_buf);
     }
     *shouldWork = false;
@@ -98,7 +95,6 @@ void cleanup(int socket_fd) {
 }
 
 bool send_all(int fd, const void *buf, size_t len) {
-    printf("send all called\n");
     size_t total_sent = 0;
     const uint8_t *p = buf;
     while (total_sent < len) {

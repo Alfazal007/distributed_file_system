@@ -36,13 +36,12 @@ void push_chunk_id(FileStateCurrentInner *file_state, int chunk_id) {
     file_state->chunk_ids = temp;
     file_state->chunk_ids[file_state->num_chunks] = chunk_id;
     file_state->num_chunks++;
-    printf("\n\ninside push chunkl id error part \n\n");
 }
 
 void insert_to_struct(StorageStateOuter *state, const char *file_path,
-                      int chunk_id) {
+                      int chunk_id, bool directoryHasFile) {
     pthread_mutex_lock(&state->lock);
-    if (chunk_id == 1) {
+    if (!directoryHasFile) {
         state->file_to_chunk_state = realloc(state->file_to_chunk_state,
                                              (state->num_file_count + 1) *
                                                  sizeof(FileStateCurrentInner));
@@ -103,11 +102,6 @@ uint8_t *return_current_state_encoded_in_protobufs(StorageStateOuter *state,
     if (increase) {
         buf[len] = '\0';
     }
-    printf("Buffer (%zu bytes):\n", len);
-    for (size_t i = 0; i < *outlen; i++) {
-        printf("%02X ", buf[i]);
-    }
-    printf("\n");
     return buf;
 }
 
