@@ -46,6 +46,7 @@ bool saveChunkToFile(const char *filename, unsigned char *data,
         return false;
     }
     size_t written = fwrite(data, 1, data_size, file);
+    printf("after writing to server");
     if (written != data_size) {
         fprintf(stderr,
                 "Failed to write all bytes. Expected: %zu, "

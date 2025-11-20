@@ -110,4 +110,17 @@ impl TcpStorage {
         res.sort();
         return res;
     }
+
+    pub fn get_file_list(&mut self) -> Vec<String> {
+        let mut res = Vec::new();
+        if self.connections.len() == 0 {
+            return res;
+        }
+        for conn_data in self.connections.iter() {
+            for file_mappings in conn_data.files_to_chunks.iter() {
+                res.push(file_mappings.filename.clone());
+            }
+        }
+        return res;
+    }
 }

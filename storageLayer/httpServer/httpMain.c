@@ -103,8 +103,10 @@ answer_to_connection(void *cls, struct MHD_Connection *connection,
                             MHD_create_response_from_fd((size_t)st.st_size, fd);
                         if (resp == NULL) {
                             close(fd);
+                            /*
                             free(con_info);
                             *con_cls = NULL;
+                            */
                             return MHD_NO;
                         }
                         MHD_add_response_header(resp, "Content-Type",

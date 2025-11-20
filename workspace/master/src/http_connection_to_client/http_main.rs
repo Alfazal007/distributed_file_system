@@ -8,6 +8,7 @@ use crate::{
         get_chunk_id_list::get_list_chunks, get_chunk_location::get_chunk_location_addr,
         get_multiple_chunk_location::get_chunk_location_addr_multiple,
         get_server_to_write_chunk_and_chunkid::return_server_to_write_chunk,
+        show_available_files::show_available_files,
     },
     state::storage_unit::TcpStorage,
 };
@@ -36,6 +37,7 @@ pub async fn http_main(
                 web::post().to(get_chunk_location_addr_multiple),
             )
             .route("/chunks", web::post().to(get_list_chunks))
+            .route("/file-list", web::get().to(show_available_files))
     })
     .bind(("127.0.0.1", 8000))
     .map_err(|e| format!("Failed to bind HTTP server: {}", e))?
