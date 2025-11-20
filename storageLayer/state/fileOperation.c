@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 bool createDirectories(const char *path) {
     char temp[512];
@@ -28,6 +29,8 @@ bool createDirectories(const char *path) {
     return true;
 }
 
+bool file_exists(const char *filepath) { return access(filepath, F_OK) == 0; }
+
 bool saveChunkToFile(const char *filename, unsigned char *data,
                      size_t data_size, StorageStateOuter *state, int chunk_id) {
     if (filename == NULL || data == NULL || data_size == 0) {
@@ -36,6 +39,9 @@ bool saveChunkToFile(const char *filename, unsigned char *data,
     }
     char full_path[512];
     snprintf(full_path, sizeof(full_path), "data/%s/%d", filename, chunk_id);
+    bool file_existed_before = file_exists(full_path);
+    if (file_existed_before)
+        return true;
     if (!createDirectories(full_path)) {
         fprintf(stderr, "Failed to create directories\n");
         return false;
