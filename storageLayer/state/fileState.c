@@ -89,7 +89,6 @@ uint8_t *return_current_state_encoded_in_protobufs(StorageStateOuter *state,
     size_t len =
         data__message_from_storage_to_master__get_packed_size(&top_wrapper);
     bool increase = false;
-    printf("len = %d", len);
     if (len > 2) {
         increase = true;
     }
