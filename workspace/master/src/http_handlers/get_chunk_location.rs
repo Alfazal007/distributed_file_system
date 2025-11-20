@@ -18,8 +18,5 @@ pub async fn get_chunk_location_addr(
         .lock()
         .unwrap()
         .get_location(&item.0.file_name, item.0.chunk_id);
-    if location.is_none() {
-        return HttpResponse::BadRequest().json({});
-    }
-    HttpResponse::Ok().json(location.unwrap())
+    HttpResponse::Ok().json(location)
 }

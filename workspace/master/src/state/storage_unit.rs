@@ -4,17 +4,21 @@ use crate::{
     protos::data::HealthMessageFromStorageToMaster, state::connection_data_internal::ConnectionData,
 };
 
+// TODO:: fix these for multi server setup
+
 #[derive(Debug)]
 pub struct TcpStorage {
     pub connections: Vec<ConnectionData>,
     pub index_to_write: i32,
+    pub replication_factor: i32,
 }
 
 impl TcpStorage {
-    pub fn new() -> Self {
+    pub fn new(replication_factor: i32) -> Self {
         Self {
             connections: Vec::new(),
             index_to_write: -1,
+            replication_factor,
         }
     }
 
@@ -73,22 +77,22 @@ impl TcpStorage {
         }
     }
 
-    pub fn get_location(&self, file_name: &str, chunk_id: i32) -> Option<IpAddr> {
+    pub fn get_location(&self, file_name: &str, chunk_id: i32) -> Vec<IpAddr> {
+        let mut res = Vec::new();
         for conn in self.connections.iter() {
-            for files in conn.files_to_chunks.iter() {
+            'outer: for files in conn.files_to_chunks.iter() {
                 if files.filename == file_name {
-                    for chunk in files.chunk_ids.iter() {
-                        if *chunk == chunk_id {
-                            return Some(conn.ip);
-                        }
+                    if files.chunk_ids.contains(&chunk_id) && !res.contains(&conn.ip) {
+                        res.push(conn.ip);
+                        break 'outer;
                     }
                 }
             }
         }
-        return None;
+        return res;
     }
 
-    pub fn get_multiple_chunks(&self, file_name: &str, chunk_ids: Vec<i32>) -> Vec<Option<IpAddr>> {
+    pub fn get_multiple_chunks(&self, file_name: &str, chunk_ids: Vec<i32>) -> Vec<Vec<IpAddr>> {
         let mut res = Vec::new();
         for id in chunk_ids {
             res.push(self.get_location(file_name, id));
@@ -99,11 +103,14 @@ impl TcpStorage {
     pub fn get_chunks_for_file(&self, file_name: &str) -> Vec<i32> {
         let mut res = Vec::new();
         for connection in self.connections.iter() {
-            for mapping_inner in connection.files_to_chunks.iter() {
+            'breaker: for mapping_inner in connection.files_to_chunks.iter() {
                 if mapping_inner.filename == file_name {
                     for id in mapping_inner.chunk_ids.iter() {
-                        res.push(id.clone());
+                        if !res.contains(id) {
+                            res.push(id.clone());
+                        }
                     }
+                    break 'breaker;
                 }
             }
         }
@@ -113,12 +120,11 @@ impl TcpStorage {
 
     pub fn get_file_list(&mut self) -> Vec<String> {
         let mut res = Vec::new();
-        if self.connections.len() == 0 {
-            return res;
-        }
         for conn_data in self.connections.iter() {
             for file_mappings in conn_data.files_to_chunks.iter() {
-                res.push(file_mappings.filename.clone());
+                if !res.contains(&file_mappings.filename) {
+                    res.push(file_mappings.filename.clone());
+                }
             }
         }
         return res;

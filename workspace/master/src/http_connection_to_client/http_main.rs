@@ -15,23 +15,27 @@ use crate::{
 
 pub struct AppState {
     pub tcp_storage_state: Arc<Mutex<TcpStorage>>,
+    pub replication_count: i32,
 }
 
 /// client contacts master(self) to get things done through this service
 pub async fn http_main(
     mut shutdown_receiver: Receiver<()>,
     tcp_storage_state: Arc<Mutex<TcpStorage>>,
+    replication_count: i32,
 ) -> Result<(), String> {
     let res = HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(AppState {
                 tcp_storage_state: Arc::clone(&tcp_storage_state),
+                replication_count,
             }))
             .route(
                 "/server_to_write",
                 web::get().to(return_server_to_write_chunk),
             )
             .route("/chunk-location", web::post().to(get_chunk_location_addr))
+            // on it
             .route(
                 "/chunk-location-multiple",
                 web::post().to(get_chunk_location_addr_multiple),

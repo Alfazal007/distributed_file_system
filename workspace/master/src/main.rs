@@ -13,7 +13,8 @@ pub mod tcp_connection_to_storage;
 
 #[tokio::main]
 async fn main() {
-    let tcp_message_state = Arc::new(Mutex::new(TcpStorage::new()));
+    let replication_factor = 1;
+    let tcp_message_state = Arc::new(Mutex::new(TcpStorage::new(replication_factor)));
     let (shutdown_channel_sender, shutdown_channel_receiver) = tokio::sync::broadcast::channel(1);
     let mut tcp_handle = tokio::spawn(tcp_main(
         shutdown_channel_receiver.resubscribe(),
@@ -22,6 +23,7 @@ async fn main() {
     let mut http_handle = tokio::spawn(http_main(
         shutdown_channel_receiver.resubscribe(),
         Arc::clone(&tcp_message_state),
+        replication_factor,
     ));
 
     tokio::select! {
