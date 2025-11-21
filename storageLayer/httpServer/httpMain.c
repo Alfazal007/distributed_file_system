@@ -1,3 +1,4 @@
+#include "../headers/deleteFile.h"
 #include "../headers/fileState.h"
 #include "../headers/getFileDescriptor.h"
 #include "../headers/handleNewChunk.h"
@@ -116,6 +117,27 @@ answer_to_connection(void *cls, struct MHD_Connection *connection,
                         MHD_destroy_response(resp);
                         return ret;
                     }
+                }
+            }
+        } else {
+            page = "{\"error\":\"404 Not Found\"}";
+            status = MHD_HTTP_NOT_FOUND;
+        }
+    } else if (strcmp(method, "DELETE") == 0) {
+        if (strcmp(url, "/remove-file") == 0) {
+            const char *filename = MHD_lookup_connection_value(
+                connection, MHD_HEADER_KIND, "X-Filename");
+            if (filename == NULL) {
+                page = "{\"error\":\"Missing X-Filename \"}";
+                status = MHD_HTTP_BAD_REQUEST;
+            } else {
+                bool ok = delete_file(filename, args->state);
+                if (!ok) {
+                    status = MHD_HTTP_INTERNAL_SERVER_ERROR;
+                    page = "{\"error\":\"404 Not Found\"}";
+                } else {
+                    status = MHD_HTTP_OK;
+                    page = "{\"message\":\"successfully deleted\"}";
                 }
             }
         } else {

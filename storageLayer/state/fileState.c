@@ -59,8 +59,42 @@ void insert_to_struct(StorageStateOuter *state, const char *file_path,
     print_storage_state(state);
 }
 
-void remove_from_struct(StorageStateOuter *state, char *file_path,
-                        int chunk_id) {}
+void remove_from_struct(StorageStateOuter *state, char *file_path) {
+    pthread_mutex_lock(&state->lock);
+    int index = -1;
+    for (int i = 0; i < state->num_file_count; i++) {
+        if (strcmp(state->file_to_chunk_state[i].file_path, file_path) == 0) {
+            index = i;
+            break;
+        }
+    }
+    if (index == -1) {
+        pthread_mutex_unlock(&state->lock);
+        return;
+    }
+    free(state->file_to_chunk_state[index].file_path);
+    free(state->file_to_chunk_state[index].chunk_ids);
+    for (int i = index; i < state->num_file_count - 1; i++) {
+        state->file_to_chunk_state[i] = state->file_to_chunk_state[i + 1];
+    }
+    state->num_file_count--;
+    if (state->num_file_count > 0) {
+        FileStateCurrentInner *temp =
+            realloc(state->file_to_chunk_state,
+                    state->num_file_count * sizeof(FileStateCurrentInner));
+        if (temp == NULL) {
+            fprintf(stderr, "Failed to reallocate memory\n");
+            pthread_mutex_unlock(&state->lock);
+            return;
+        }
+        state->file_to_chunk_state = temp;
+    } else {
+        free(state->file_to_chunk_state);
+        state->file_to_chunk_state = NULL;
+    }
+    pthread_mutex_unlock(&state->lock);
+    print_storage_state(state);
+}
 
 uint8_t *return_current_state_encoded_in_protobufs(StorageStateOuter *state,
                                                    size_t *outlen) {

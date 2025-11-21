@@ -42,8 +42,7 @@ void storage_state_destroy(StorageStateOuter *state);
 void insert_to_struct(StorageStateOuter *state, const char *file_path,
                       int chunk_id, bool directoryHasFile);
 
-void remove_from_struct(StorageStateOuter *state, char *file_path,
-                        int chunk_id);
+void remove_from_struct(StorageStateOuter *state, char *file_path);
 
 uint8_t *return_current_state_encoded_in_protobufs(StorageStateOuter *state,
                                                    size_t *outlen);

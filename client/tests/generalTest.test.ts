@@ -19,20 +19,19 @@ test("testing upload file", async () => {
     let absolutePath = path.join(__dirname, `../file/${fileName}`)
     let uploadResult = await tryCatch(insertChunk(absolutePath, fileName))
     expect(uploadResult.data).toBe(true)
+    await new Promise((resolve) => setTimeout(() => resolve(true), 10000)) // so master can reflect changes
 })
 
-/*
-    test("testing get single chunk location", async () => {
-        let locations = await getSingleChunkLocations("invalid", 68)
-        expect(locations).toEqual([])
-        locations = await getSingleChunkLocations("first", 1)
-        expect(locations).toEqual(["127.0.0.1"])
-    })
+test("testing get single chunk location", async () => {
+    let locations = await getSingleChunkLocations("invalid", 68)
+    expect(locations).toEqual([])
+    locations = await getSingleChunkLocations("tester.pdf", 1)
+    expect(locations).toEqual(["127.0.0.1"])
+})
 
-    test("testing get multiple chunks location", async () => {
-        let locations = await getMultipleChunkLocations("invalid", [1, 2, 3, 4, 68])
-        expect(locations).toEqual([[], [], [], [], []])
-        locations = await getMultipleChunkLocations("first", [1, 2, 34])
-        expect(locations).toEqual([["127.0.0.1"], [], []])
-    })
-*/
+test("testing get multiple chunks location", async () => {
+    let locations = await getMultipleChunkLocations("invalid", [1, 2, 3, 4, 68])
+    expect(locations).toEqual([[], [], [], [], []])
+    locations = await getMultipleChunkLocations("tester.pdf", [1, 34, 3])
+    expect(locations).toEqual([["127.0.0.1"], [], ["127.0.0.1"]])
+})

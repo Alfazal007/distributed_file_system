@@ -3,7 +3,7 @@
 set -e
 
 echo "🧹 Cleaning old builds..."
-rm -rf build/ storageLayer
+rm -rf build/ storageLayer data
 
 echo "🔨 Building project..."
 make
