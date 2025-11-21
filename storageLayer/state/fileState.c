@@ -56,6 +56,7 @@ void insert_to_struct(StorageStateOuter *state, const char *file_path,
         &state->file_to_chunk_state[state->num_file_count - 1];
     push_chunk_id(current_file, chunk_id);
     pthread_mutex_unlock(&state->lock);
+    print_storage_state(state);
 }
 
 void remove_from_struct(StorageStateOuter *state, char *file_path,
@@ -87,20 +88,13 @@ uint8_t *return_current_state_encoded_in_protobufs(StorageStateOuter *state,
     top_wrapper.health = &msg;
     size_t len =
         data__message_from_storage_to_master__get_packed_size(&top_wrapper);
-    bool increase = false;
-    if (len > 2) {
-        increase = true;
-    }
-    uint8_t *buf = malloc(increase == false ? len : len + 1);
+    uint8_t *buf = malloc(len);
     data__message_from_storage_to_master__pack(&top_wrapper, buf);
-    *outlen = increase == false ? len : len + 1;
+    *outlen = len;
     if (state->num_file_count > 0) {
         for (int i = 0; i < state->num_file_count; i++)
             free(msg.file_mappings[i]);
         free(msg.file_mappings);
-    }
-    if (increase) {
-        buf[len] = '\0';
     }
     return buf;
 }

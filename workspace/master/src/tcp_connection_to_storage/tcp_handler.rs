@@ -5,7 +5,7 @@ use crate::{
 use prost::Message;
 use std::sync::{Arc, Mutex};
 use tokio::{
-    io::{AsyncBufReadExt, BufReader},
+    io::{AsyncReadExt, BufReader},
     net::TcpListener,
 };
 use uuid::Uuid;
@@ -28,7 +28,7 @@ pub async fn accept_connections(
             let connection_id = Uuid::new_v4().to_string();
             let (reader, writer) = socket.into_split();
             let mut buf_reader = BufReader::new(reader);
-            let mut buf = Vec::new();
+            let mut buf: Vec<u8> = Vec::new();
             tokio::spawn(health_check_send(
                 writer,
                 Arc::clone(&shared_conn_state),
@@ -36,41 +36,42 @@ pub async fn accept_connections(
             ));
             loop {
                 buf.clear();
-                match buf_reader.read_until(b'\0', &mut buf).await {
-                    Ok(0) => {
-                        println!("Client {} disconnected", addr);
-                        break;
-                    }
-                    Ok(_) => {
-                        if buf.len() > 2 {
-                            buf.pop();
-                        }
-                        println!("some message came in");
-                        if let Ok(msg) = data::MessageFromStorageToMaster::decode(&*buf) {
-                            if let Some(internal_msg) = msg.msg_type {
-                                println!("{:?}", internal_msg);
-                                match internal_msg {
-                                    data::message_from_storage_to_master::MsgType::Join(_) => {
-                                        tcp_storage_inner
-                                            .lock()
-                                            .expect("Deadlock in tcp message locking stage")
-                                            .insert(&connection_id, addr.ip());
-                                        *shared_conn_state.lock().unwrap() = true;
+                match buf_reader.read_u32().await {
+                    Ok(size) => {
+                        let mut buf = vec![0u8; size as usize];
+                        match buf_reader.read_exact(&mut buf).await {
+                            Ok(_) => {
+                                println!("{:?}", buf);
+                                if let Ok(msg) = data::MessageFromStorageToMaster::decode(&*buf) {
+                                    if let Some(internal_msg) = msg.msg_type {
+                                        match internal_msg {
+                                                    data::message_from_storage_to_master::MsgType::Join(_) => {
+                                                        tcp_storage_inner
+                                                            .lock()
+                                                            .expect("Deadlock in tcp message locking stage")
+                                                            .insert(&connection_id, addr.ip());
+                                                        *shared_conn_state.lock().unwrap() = true;
+                                                    }
+                                                    data::message_from_storage_to_master::MsgType::Health(
+                                                        file_state,
+                                                    ) => tcp_storage_inner
+                                                        .lock()
+                                                        .expect("Deadlock in tcp message locking stage")
+                                                        .update_state(&connection_id, file_state),
+                                                }
                                     }
-                                    data::message_from_storage_to_master::MsgType::Health(
-                                        file_state,
-                                    ) => tcp_storage_inner
-                                        .lock()
-                                        .expect("Deadlock in tcp message locking stage")
-                                        .update_state(&connection_id, file_state),
+                                } else {
+                                    println!("wrong message");
                                 }
                             }
-                        } else {
-                            println!("wrong message");
+                            Err(e) => {
+                                println!("Error reading data from {}: {}", addr, e);
+                                break;
+                            }
                         }
                     }
                     Err(e) => {
-                        println!("Error reading from {}: {}", addr, e);
+                        println!("Error reading size from {}: {}", addr, e);
                         break;
                     }
                 }

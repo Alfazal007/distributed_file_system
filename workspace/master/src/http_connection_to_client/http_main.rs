@@ -50,7 +50,7 @@ pub async fn http_main(
 
     tokio::select! {
         _ = shutdown_receiver.recv() => {
-            println!("returning http connetion");
+            println!("returning http connection");
             return Err("Error message received, closing tcp connection".to_string());
         },
         result = res => {

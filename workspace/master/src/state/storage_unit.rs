@@ -31,7 +31,6 @@ impl TcpStorage {
         if self.index_to_write == -1 {
             self.index_to_write = 0;
         }
-        self.print();
     }
 
     pub fn remove(&mut self, connection_id: &str) {
@@ -53,7 +52,6 @@ impl TcpStorage {
         } else {
             eprintln!("Connection not found: {}", connection_id);
         }
-        self.print();
     }
 
     pub fn print(&self) {

@@ -41,6 +41,12 @@ void connect_to_server(int socket_fd) {
 void send_initial_message(int socket_fd) {
     size_t buf_len;
     uint8_t *join_message_buf = join_message(&buf_len);
+    uint32_t size = htonl((uint32_t)buf_len);
+    if (!send_all(socket_fd, (uint8_t *)&size, sizeof(size))) {
+        perror("send size failed");
+        free(join_message_buf);
+        exit(EXIT_FAILURE);
+    }
     if (!send_all(socket_fd, join_message_buf, buf_len)) {
         perror("send failed");
         free(join_message_buf);
@@ -77,6 +83,14 @@ void *receive_messages(void *arg) {
         size_t buf_len;
         uint8_t *file_state_message_buf =
             return_current_state_encoded_in_protobufs(state, &buf_len);
+
+        uint32_t size = htonl((uint32_t)buf_len);
+        if (!send_all(socket_fd, (uint8_t *)&size, sizeof(size))) {
+            perror("send size failed");
+            free(file_state_message_buf);
+            exit(EXIT_FAILURE);
+        }
+
         if (!send_all(socket_fd, file_state_message_buf, buf_len)) {
             perror("send failed");
             free(file_state_message_buf);
