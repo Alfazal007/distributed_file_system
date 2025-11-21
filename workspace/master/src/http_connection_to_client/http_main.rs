@@ -6,6 +6,7 @@ use tokio::sync::broadcast::Receiver;
 use crate::{
     http_handlers::{
         get_chunk_id_list::get_list_chunks, get_chunk_location::get_chunk_location_addr,
+        get_file_locations::get_file_location,
         get_multiple_chunk_location::get_chunk_location_addr_multiple,
         get_server_to_write_chunk_and_chunkid::return_server_to_write_chunk,
         show_available_files::show_available_files,
@@ -42,6 +43,7 @@ pub async fn http_main(
             )
             .route("/chunks", web::post().to(get_list_chunks))
             .route("/file-list", web::get().to(show_available_files))
+            .route("/filelocation", web::post().to(get_file_location))
     })
     .bind(("127.0.0.1", 8000))
     .map_err(|e| format!("Failed to bind HTTP server: {}", e))?

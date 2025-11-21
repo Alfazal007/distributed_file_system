@@ -127,4 +127,17 @@ impl TcpStorage {
         }
         return res;
     }
+
+    pub fn get_file_locations(&mut self, file_name: &str) -> Vec<String> {
+        let mut res: Vec<String> = Vec::new();
+        for conn_data in self.connections.iter() {
+            for file_mappings in conn_data.files_to_chunks.iter() {
+                if file_mappings.filename == file_name && !res.contains(&file_mappings.filename) {
+                    res.push(conn_data.ip.to_string());
+                    break;
+                }
+            }
+        }
+        return res;
+    }
 }

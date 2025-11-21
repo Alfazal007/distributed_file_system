@@ -4,7 +4,7 @@ import fs from "fs"
 import axios from "axios"
 import { getChunkServerToAddChunkTo } from "../master/getChunkServerToInsertTo"
 
-export async function insertChunk(
+export async function insertFile(
     absoluteFilePath: string,
     fileName: string
 ): Promise<boolean> {
